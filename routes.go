@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/akashgupta1909/Real-Time-Leaderboard/internal/auth"
+	"github.com/akashgupta1909/Real-Time-Leaderboard/internal/event"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/redis/go-redis/v9"
@@ -32,6 +33,8 @@ func initRoutes(database *mongo.Database, redisClient *redis.Client) *chi.Mux {
 
 	// Mount the user routes under the "/auth" path
 	auth.MountUserRoutes(router, database, redisClient)
+	// Mount the event routes under the "/event" path
+	event.MountEventRoutes(router, database, redisClient)
 
 	return router
 }

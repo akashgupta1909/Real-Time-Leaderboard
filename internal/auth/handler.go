@@ -27,35 +27,55 @@ func MountUserRoutes(router *chi.Mux, database *mongo.Database, redisClient *red
 
 func signupHandler(w http.ResponseWriter, req *http.Request, repo *repository.UserRepository) {
 	decoder := json.NewDecoder(req.Body)
-	userRequest := models.UserRequest{}
+	userRequest := models.CreateUserRequest{}
 
 	err := decoder.Decode(&userRequest)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
-	createdUser, err := createNewUser(userRequest, repo)
+
+	if userRequest.Email == "" || userRequest.Password == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "email and password are required")
+		return
+	}
+	if userRequest.FirstName == "" && userRequest.LastName == "" {
+		userRequest.FirstName = "Default"
+		userRequest.LastName = "User"
+	}
+
+	createdUser, token, err := createNewUser(userRequest, repo)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to create user")
 		return
 	}
-	utils.RespondWithJson(w, http.StatusCreated, models.NewUserResponse(createdUser))
 
+	utils.RespondWithJson(w, http.StatusCreated, models.NewUserResponse(createdUser.Username, "user created successfully", token))
 }
 
 func loginHandler(w http.ResponseWriter, req *http.Request, repo *repository.UserRepository) {
 	decoder := json.NewDecoder(req.Body)
-	userRequest := models.FetchUserRequest{}
+	userRequest := models.LoginUserRequest{}
 
 	err := decoder.Decode(&userRequest)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
-	user, err := fetchUser(userRequest.Email, userRequest.Username, repo)
+	if userRequest.Username == "" && userRequest.Email == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "username or email is required")
+		return
+	}
+	if userRequest.Password == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "password is required")
+		return
+	}
+
+	user, token, err := fetchUser(userRequest, repo)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to fetch user")
 		return
 	}
-	utils.RespondWithJson(w, http.StatusOK, models.NewUserResponse(user))
+
+	utils.RespondWithJson(w, http.StatusOK, models.NewUserResponse(user.Username, "user login successful", token))
 }

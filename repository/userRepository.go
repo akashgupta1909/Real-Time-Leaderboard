@@ -16,9 +16,9 @@ type UserRepository struct {
 	MongoCollection *mongo.Collection
 }
 
-type handler func(w http.ResponseWriter, req *http.Request, repo *UserRepository)
+type userHandler func(w http.ResponseWriter, req *http.Request, repo *UserRepository)
 
-func (repo *UserRepository) UserDBRequestHandler(next handler) http.HandlerFunc {
+func (repo *UserRepository) UserDBRequestHandler(next userHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		next(w, req, repo)
 	}
@@ -51,6 +51,21 @@ func (repo *UserRepository) FindUserByEmail(email string) (models.User, error) {
 func (repo *UserRepository) FindUserByUsername(username string) (models.User, error) {
 	var user models.User
 	err := repo.MongoCollection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
+	if err != nil {
+		return models.User{}, err
+	}
+	return user, nil
+}
+
+// FindUserById is a method that finds a user by their ID.
+// It takes an ID string as input and returns the User object or an error.
+func (repo *UserRepository) FindUserByID(id string) (models.User, error) {
+	var user models.User
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return models.User{}, err
+	}
+	err = repo.MongoCollection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&user)
 	if err != nil {
 		return models.User{}, err
 	}
